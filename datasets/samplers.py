@@ -79,9 +79,9 @@ class LoadingSampler(object):
 
     def __call__(self, data=None, test_batch_proportion=None):
         if self.dt == 'float':
-            self.dt = np.float64
+            self.dt = np.float32
         elif self.dt == 'int':
-            self.dt = np.int64
+            self.dt = np.int32
             
         idxs = []
         for filename in self.filenames:

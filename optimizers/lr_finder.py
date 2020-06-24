@@ -14,8 +14,8 @@ from focal_loss import FocalLossBinary
 
 sys.path.insert(0, '..')
 
-from datasets.chromatograms_dataset import ChromatogramsDataset
-from datasets.samplers import GroupBySequenceSampler
+from datasets.chromatograms_dataset import NpyChromatogramsDataset
+from datasets.samplers import LoadingSampler
 from datasets.transforms import ToTensor
 from models.modelzoo1d.ddsct import DDSCTransformer
 from train.collate_fns import PadChromatogramsFor1DCNN
@@ -338,30 +338,35 @@ class StateCacher(object):
 if __name__ == "__main__":
     transform = ToTensor()
 
-    root_path = input('Root path: ')
-    chromatograms = input('Chromatograms CSV: ')
-    labels = input('Labels npy: ')
+    root_dir = input('Dataset root dir: ')
+    chromatograms_filename = input('Dataset chromatograms csv: ')
+    dataset = input('Dataset filename: ')
+    labels_filename = input('Dataset labels npy: ')
+    num_features = int(input('Num features: '))
+    dataset = NpyChromatogramsDataset(
+        root_dir,
+        chromatograms_csv,
+        dataset,
+        labels=labels_filename,
+        weak_labels=None,
+        load_weak_labels=False,
+        memmap=False,
+        num_features=num_features,
+        transform=ToTensor())
 
-    data = ChromatogramsDataset(
-        root_path=root_path,
-        chromatograms=chromatograms,
-        labels=labels,
-        transform=transform
-    )
-
-    sampler = GroupBySequenceSampler(naked=True)
+    sampler = LoadingSampler(root_path='', filenames=[])
 
     collate_fn = PadChromatogramsFor1DCNN()
 
-    train_idx, val_idx, test_idx = sampler(data, 0.1)
+    train_idx = sampler()[0]
 
-    train_set = Subset(data, train_idx)
+    train_set = Subset(dataset, train_idx)
 
     train_loader = DataLoader(
-        train_set, batch_size=32, collate_fn=collate_fn)
+        train_set, batch_size=512, collate_fn=collate_fn)
 
-    # TODO: Allow any model
-    model = DDSTSTransformer()
+    # TODO: Allow any model and set of parameters
+    model = DDSCTransformer()
 
     criterion = FocalLossBinary()
     optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=0)

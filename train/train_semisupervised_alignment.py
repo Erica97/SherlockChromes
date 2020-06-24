@@ -172,7 +172,7 @@ def train(
     train_template_loader = iter(cycle(train_template_loader))
     val_template_loader = iter(cycle(val_template_loader))
 
-    highest_dice, highest_iou, lowest_loss = 0, 0, 1
+    highest_dice, highest_iou, lowest_loss = 0, 0, 100
 
     model.to(device)
 

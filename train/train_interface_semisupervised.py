@@ -11,6 +11,7 @@ def main(
         sampling_fn,
         collate_fn,
         optimizer_kwargs,
+        scheduler_kwargs,
         train_kwargs,
         device):
     model_kwargs = {}
@@ -39,7 +40,6 @@ def main(
         'regularizer_sigma_max',
         'regularizer_p_min',
         'regularizer_p_max',
-        'modulation_mode',
         'loss_alpha',
         'loss_gamma',
         'loss_logits',
@@ -53,12 +53,27 @@ def main(
         model,
         **model_kwargs)
 
-    optimizer = optim.AdamW(model.parameters(), **optimizer_kwargs)
+    optimizer = train_kwargs.pop('optimizer', None)
+
+    if optimizer == 'SGD':
+        optimizer = optim.SGD(model.parameters(), **optimizer_kwargs)
+    elif optimizer == 'AdamW':
+        optimizer = optim.AdamW(model.parameters(), **optimizer_kwargs)
+
+    scheduler = train_kwargs.pop('scheduler', None)
+
+    if scheduler == 'OneCycle':
+        scheduler = optim.lr_scheduler.OneCycleLR(
+            optimizer, **scheduler_kwargs)
+    elif scheduler == 'CosineAnnealing':
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, **scheduler_kwargs)
 
     train(
         data,
         model,
         optimizer,
+        scheduler,
         loss,
         sampling_fn,
         collate_fn,

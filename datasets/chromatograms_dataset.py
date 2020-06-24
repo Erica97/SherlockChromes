@@ -215,9 +215,9 @@ class NpyChromatogramsDataset(Dataset):
         labels=None,
         weak_labels=None,
         load_weak_labels=False,
-        transform=None,
         memmap=False,
-        num_features=497):
+        num_features=497,
+        transform=None):
         """
         Args:
             root_path (string): Path to the root folder.

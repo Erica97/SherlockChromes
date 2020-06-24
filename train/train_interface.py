@@ -10,6 +10,7 @@ def main(
         sampling_fn,
         collate_fn,
         optimizer_kwargs,
+        lr_scheduler_kwargs,
         train_kwargs,
         device):
     optimizer = optim.AdamW(model.parameters(), **optimizer_kwargs)

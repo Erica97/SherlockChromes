@@ -160,7 +160,7 @@ def create_data_from_transition_ids(
     if len(ms2_transition_ids) == 0:
         print(f'Skipped {chromatogram_filename}, no transitions found')
 
-        return -1, -1, -1
+        return -1, -1, -1, None
 
     ms2_transition_ids = [item[0] for item in ms2_transition_ids]
 
@@ -267,15 +267,15 @@ def create_data_from_transition_ids(
             if chromatogram.shape[1] != window_size:
                 print(f'Skipped {chromatogram_filename}, misshapen matrix')
 
-                return -1, -1, -1
+                return -1, -1, -1, None
             elif extra.shape[1] != window_size:
                 print(f'Skipped {chromatogram_filename}, misshapen matrix')
 
-                return -1, -1, -1
+                return -1, -1, -1, None
             elif len(row_labels) != window_size:
                 print(f'Skipped {chromatogram_filename}, misshapen matrix')
 
-                return -1, -1, -1
+                return -1, -1, -1, None
 
             label_idxs = np.where(row_labels == 1)[0]
 
@@ -421,10 +421,16 @@ def get_cnn_data(
                     exp_rt=exp_rt,
                     extra_features=extra_features,
                     csv_only=csv_only,
-                    window_size=window_size)
+                    window_size=window_size,
+                    mode=mode)
 
-                if not isinstance(labels, np.ndarray) and labels == -1:
+                if not isinstance(labels, np.ndarray):
                     continue
+
+                if not isinstance(chromatogram, np.ndarray):
+                    continue
+
+                chromatograms_array.append(chromatogram)
 
             if not csv_only and scored:
                 label_matrix.append(labels)

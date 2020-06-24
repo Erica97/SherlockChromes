@@ -57,6 +57,8 @@ def run_experiment(yaml_filepath):
 
     optimizer_kwargs = cfg['optimizer']['kwargs']
 
+    lr_scheduler_kwargs = cfg['scheduler']['kwargs']
+
     sampling_fn = create_obj_from_cfg_section(cfg, 'sampling_fn')
 
     collate_fn = create_obj_from_cfg_section(cfg, 'collate_fn')
@@ -75,6 +77,7 @@ def run_experiment(yaml_filepath):
         sampling_fn,
         collate_fn,
         optimizer_kwargs,
+        lr_scheduler_kwargs,
         train_kwargs,
         device)
 

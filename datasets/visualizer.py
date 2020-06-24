@@ -8,7 +8,7 @@ import torch
 
 from sklearn.metrics import average_precision_score, confusion_matrix, precision_recall_curve
 
-from chromatograms_dataset import TarChromatogramsDataset
+from chromatograms_dataset import NpyChromatogramsDataset
 
 def plot_whole_chromatogram(
     chromatogram_id,
@@ -531,14 +531,14 @@ if __name__ == "__main__":
     # e.g. osw_point_labels.npy
     labels_filename = input('Dataset labels npy: ')
     # e.g. hroest_Strep_600s_175pts.tar
-    tar = input('Tar filename: ')
-    tar_shape = input('Tar shape: ').split(',')
-    dataset = TarChromatogramsDataset(
+    dataset = input('Dataset filename: ')
+    num_features = int(input('Num features: '))
+    dataset = NpyChromatogramsDataset(
         root_dir,
         chromatograms_filename,
-        tar,
-        tar_shape=tar_shape,
-        labels=labels_filename)
+        dataset,
+        labels=labels_filename,
+        num_features=num_features)
 
     # e.g. ../../../data/output/custom_3_layer_21_kernel_osw_points_wrt/custom_3_layer_21_kernel_osw_points_wrt_model_150.pth
     model_filename = input('Model pth: ')

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Subset
 
 sys.path.insert(0, '..')
 
-from datasets.chromatograms_dataset import TarChromatogramsDataset
+from datasets.chromatograms_dataset import NpyChromatogramsDataset
 from datasets.samplers import LoadingSampler
 from datasets.transforms import ToTensor
 from models.temperature_scaler import AlignmentTemperatureScaler, TemperatureScaler
@@ -229,6 +229,7 @@ def create_results_file(
 
     label_output_array = np.zeros((output_array.shape))
     binarized_output_array = np.where(output_array >= threshold, 1, 0)
+    inverse_binarized_output_array = (1 - binarized_output_array)
 
     for i in range(len(chromatograms)):
         print(i)
@@ -237,12 +238,23 @@ def create_results_file(
 
         output = output_array[i]
         binarized_output = binarized_output_array[i]
+        inverse_binarized_output = inverse_binarized_output_array[i]
 
         left_width, right_width = np.argmax(output), np.argmax(output)
 
         score = np.max(output)
 
         high_quality = 0
+
+        gaps = scipy.ndimage.find_objects(
+            scipy.ndimage.label(inverse_binarized_output_array[i])[0])
+
+        for gap in gaps:
+            gap = gap[0]
+            gap_length = gap.stop - gap.start
+
+            if gap_length < 3:
+                binarized_output[gap.start:gap.stop] = 1
 
         regions_of_interest = scipy.ndimage.find_objects(
             scipy.ndimage.label(binarized_output)[0])
@@ -369,13 +381,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-data_dir', '--data_dir', type=str, default='.')
     parser.add_argument(
-        '-dataset', '--dataset', type=str, default='hroest_Strep_600s_175pts.tar')
+        '-dataset', '--dataset', type=str, default='hroest_Strep_600s_175pts.npy')
     parser.add_argument(
         '-chromatograms_csv',
         '--chromatograms_csv',
         type=str,
         default='chromatograms.csv')
-    parser.add_argument('-tar_shape', '--tar_shape', type=str, default='6,175')
+    parser.add_argument(
+        '-num_features', '--num_features', type=int, default=497)
     parser.add_argument(
         '-model_pth', '--model_pth', type=str, default='model.pth')
     parser.add_argument(
@@ -393,11 +406,6 @@ if __name__ == "__main__":
     parser.add_argument('-mode', '--mode', type=str, default='inference')
     parser.add_argument('-num_points', '--num_points', type=int, default=3)
     parser.add_argument(
-        '-preload_path',
-        '--preload_path',
-        type=str,
-        default='hroest_Strep_600s_175pts.npy')
-    parser.add_argument(
         '-template_chromatograms_csv',
         '--template_chromatograms_csv',
         type=str,
@@ -406,17 +414,12 @@ if __name__ == "__main__":
         '-template_dataset',
         '--template_dataset',
         type=str,
-        default='hroest_Strep_600s_175pts.tar')
+        default='hroest_Strep_600s_175pts.npy')
     parser.add_argument(
         '-template_labels',
         '--template_labels',
         type=str,
         default='hroest_Strep_600s_175pts_labels.npy')
-    parser.add_argument(
-        '-template_preload_path',
-        '--template_preload_path',
-        type=str,
-        default='hroest_Strep_600s_175pts.npy')
     parser.add_argument(
         '-template_idx',
         '--template_idx',
@@ -438,17 +441,12 @@ if __name__ == "__main__":
         '-calibration_dataset',
         '--calibration_dataset',
         type=str,
-        default='hroest_Strep_600s_175pts.tar')
+        default='hroest_Strep_600s_175pts.npy')
     parser.add_argument(
         '-calibration_labels',
         '--calibration_labels',
         type=str,
         default='hroest_Strep_600s_175pts_labels.npy')
-    parser.add_argument(
-        '-calibration_preload_path',
-        '--calibration_preload_path',
-        type=str,
-        default='hroest_Strep_600s_175pts.npy')
     parser.add_argument(
         '-calibration_idx',
         '--calibration_idx',
@@ -466,31 +464,29 @@ if __name__ == "__main__":
         default=2)
     args = parser.parse_args()
 
-    args.tar_shape = [int(x) for x in args.tar_shape.split(',')]
-
     print(args)
 
-    preload = args.load_npy == False
-
-    dataset = TarChromatogramsDataset(
+    dataset = NpyChromatogramsDataset(
         args.data_dir,
         args.chromatograms_csv,
         args.dataset,
-        tar_shape=args.tar_shape,
         labels=None,
-        preload=preload,
-        preload_path=args.preload_path,
+        weak_labels=None,
+        load_weak_labels=False,
+        memmap=False,
+        num_features=args.num_features,
         transform=ToTensor())
 
     if args.mode == 'alignment':
-        template_dataset = TarChromatogramsDataset(
+        template_dataset = NpyChromatogramsDataset(
             args.data_dir,
             args.template_chromatograms_csv,
             args.template_dataset,
-            tar_shape=args.tar_shape,
             labels=args.template_labels,
-            preload=preload,
-            preload_path=args.template_preload_path,
+            weak_labels=None,
+            load_weak_labels=False,
+            memmap=False,
+            num_features=args.num_features,
             transform=ToTensor())
 
         sampling_fn = LoadingSampler(
@@ -503,14 +499,15 @@ if __name__ == "__main__":
         template_dataset = Subset(template_dataset, evaluation_template_idx)
 
     if args.calibrate:
-        calibration_dataset = TarChromatogramsDataset(
+        calibration_dataset = NpyChromatogramsDataset(
             args.data_dir,
             args.calibration_chromatograms_csv,
             args.calibration_dataset,
-            tar_shape=args.tar_shape,
             labels=args.calibration_labels,
-            preload=preload,
-            preload_path=args.calibration_preload_path,
+            weak_labels=None,
+            load_weak_labels=False,
+            memmap=False,
+            num_features=args.num_features,
             transform=ToTensor())
 
         sampling_fn = LoadingSampler(
@@ -525,6 +522,9 @@ if __name__ == "__main__":
     print('Data loaded in {0:0.1f} seconds'.format(time.time() - start))
 
     model = torch.load(args.model_pth, map_location=args.device)
+
+    if hasattr(model, 'get_model'):
+        model = model.get_model()
     
     if args.mode == 'rpn':
         model.mode = 'test'
@@ -571,7 +571,8 @@ if __name__ == "__main__":
                 args.template_batch_size)
         else:
             if args.calibrate:
-                model.probs = False
+                if hasattr(model, 'set_output_probs'):
+                    model.set_output_probs(False)
 
                 model = calibrate(
                     calibration_dataset,
